@@ -1,16 +1,20 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Volume2 } from "lucide-react";
+import { Volume2, Play, Pause } from "lucide-react";
 
 interface SlingshotVolumeProps {
   volume: number;
   onVolumeChange: (newVolume: number) => void;
   onInteractionStart?: () => void;
+  onTogglePlay?: () => void;
+  isPlaying?: boolean;
 }
 
 const SlingshotVolume: React.FC<SlingshotVolumeProps> = ({
   volume,
   onVolumeChange,
   onInteractionStart,
+  onTogglePlay,
+  isPlaying = false,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
@@ -21,6 +25,7 @@ const SlingshotVolume: React.FC<SlingshotVolumeProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const iconRef = useRef<HTMLDivElement>(null);
   const volumeLineRef = useRef<HTMLDivElement>(null);
+  const playPauseRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number>();
   const ballVelocity = useRef({ x: 0, y: 0 });
   const initialIconPos = useRef({ x: 0, y: 0 });
@@ -113,6 +118,26 @@ const SlingshotVolume: React.FC<SlingshotVolumeProps> = ({
         const ballScreenX = iconCenterX + currentPos.x;
         const ballScreenY = iconCenterY + currentPos.y;
 
+        // Check collision with Play/Pause button
+        if (playPauseRef.current) {
+          const playRect = playPauseRef.current.getBoundingClientRect();
+          const playCenterX = playRect.left + playRect.width / 2;
+          const playCenterY = playRect.top + playRect.height / 2;
+
+          // Simple distance check for circular target
+          const distToPlay = Math.sqrt(
+            Math.pow(ballScreenX - playCenterX, 2) +
+              Math.pow(ballScreenY - playCenterY, 2)
+          );
+
+          if (distToPlay < 25) {
+            // Hit radius
+            onTogglePlay?.();
+            setIsFlying(false);
+            return;
+          }
+        }
+
         // Check if ball crosses the line's Y level
         const lineTop = lineRect.top;
         const lineBottom = lineRect.bottom;
@@ -122,8 +147,8 @@ const SlingshotVolume: React.FC<SlingshotVolumeProps> = ({
         if (
           ballScreenX >= lineLeft &&
           ballScreenX <= lineRight &&
-          ballScreenY >= lineTop &&
-          ballScreenY <= lineBottom + 10 // tolerance
+          ballScreenY >= lineTop - 10 &&
+          ballScreenY <= lineBottom + 10
         ) {
           // Landed!
           const relativeX = ballScreenX - lineLeft;
@@ -149,7 +174,7 @@ const SlingshotVolume: React.FC<SlingshotVolumeProps> = ({
     };
 
     animationRef.current = requestAnimationFrame(animate);
-  }, [isDragging, dragPos, onVolumeChange]);
+  }, [isDragging, dragPos, onVolumeChange, onTogglePlay]);
 
   useEffect(() => {
     if (isDragging) {
@@ -175,15 +200,17 @@ const SlingshotVolume: React.FC<SlingshotVolumeProps> = ({
         {/* The Rubber Band Line */}
         {isDragging && (
           <svg
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 overflow-visible pointer-events-none"
+            className="absolute top-1/2 left-1/2 overflow-visible pointer-events-none"
             style={{ zIndex: -1 }}
+            width="0"
+            height="0"
           >
             <line
               x1={0}
               y1={0}
               x2={dragPos.x}
               y2={dragPos.y}
-              stroke="#e5e7eb"
+              stroke="#4b5563"
               strokeWidth="4"
               strokeLinecap="round"
             />
@@ -220,7 +247,7 @@ const SlingshotVolume: React.FC<SlingshotVolumeProps> = ({
 
       {/* Volume Line */}
       <div
-        className="relative w-64 h-2 bg-gray-200/50 backdrop-blur-sm rounded-full"
+        className="relative w-64 h-4 bg-gray-200 rounded-full"
         ref={volumeLineRef}
       >
         {/* Fill based on current volume */}
@@ -230,11 +257,22 @@ const SlingshotVolume: React.FC<SlingshotVolumeProps> = ({
         />
 
         {/* Markers for visual reference */}
-        <div className="absolute top-4 left-0 text-xs text-white/80 font-medium">
-          0%
-        </div>
-        <div className="absolute top-4 right-0 text-xs text-white/80 font-medium">
-          100%
+        <div className="absolute top-4 left-0 text-xs text-gray-400">0%</div>
+        <div className="absolute top-4 right-0 text-xs text-gray-400">100%</div>
+      </div>
+
+      {/* Play/Pause Target */}
+      <div
+        ref={playPauseRef}
+        className="absolute bottom-0 -right-24 -translate-x-1/2 w-12 h-12 bg-gray-100 rounded-full border-2 border-gray-300 flex items-center justify-center shadow-sm"
+      >
+        {isPlaying ? (
+          <Pause className="w-5 h-5 text-gray-600" />
+        ) : (
+          <Play className="w-5 h-5 text-gray-600 ml-1" />
+        )}
+        <div className="absolute -bottom-6 text-xs text-gray-400 whitespace-nowrap">
+          Hit to Pause
         </div>
       </div>
     </div>

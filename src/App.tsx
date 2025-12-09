@@ -14,11 +14,25 @@ function App() {
   };
 
   const handleInteractionStart = () => {
-    if (audioRef.current && audioRef.current.paused) {
+    if (audioRef.current && audioRef.current.paused && !isPlaying) {
       audioRef.current
         .play()
         .then(() => setIsPlaying(true))
         .catch((e) => console.log("Audio play failed", e));
+    }
+  };
+
+  const handleTogglePlay = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current
+          .play()
+          .catch((e) => console.log("Audio play failed", e));
+        setIsPlaying(true);
+      }
     }
   };
 
@@ -30,7 +44,7 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-gray-900">
+    <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden bg-gray-50">
       {/* Background GIF (Rick Roll) */}
       {isPlaying && (
         <div className="absolute inset-0 z-0">
@@ -42,12 +56,29 @@ function App() {
         </div>
       )}
 
-      <div className="relative z-10 scale-150">
-        <SlingshotVolume
-          volume={volume}
-          onVolumeChange={handleVolumeChange}
-          onInteractionStart={handleInteractionStart}
-        />
+      <div className="relative z-10 flex flex-col items-center">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4 drop-shadow-sm">
+            Drag and play
+          </h1>
+          <p className="text-gray-600 font-medium">
+            Drag the speaker back and release to set the volume!
+          </p>
+        </div>
+
+        <div className="bg-white p-12 rounded-2xl shadow-xl">
+          <SlingshotVolume
+            volume={volume}
+            onVolumeChange={handleVolumeChange}
+            onInteractionStart={handleInteractionStart}
+            onTogglePlay={handleTogglePlay}
+            isPlaying={isPlaying}
+          />
+        </div>
+
+        <div className="mt-8 text-sm text-gray-500 font-medium bg-white/80 px-4 py-2 rounded-full backdrop-blur-sm">
+          Current Volume: {Math.round(volume * 100)}%
+        </div>
       </div>
 
       {/* Demo Audio */}
